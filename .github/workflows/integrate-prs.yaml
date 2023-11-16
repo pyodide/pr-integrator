@@ -28,6 +28,8 @@ jobs:
         include: ${{ fromJson(needs.build-matrix.outputs.include) }}
     env:
       CI_COMMIT_AUTHOR: "pyodide-pr-bot (workflow)"
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
