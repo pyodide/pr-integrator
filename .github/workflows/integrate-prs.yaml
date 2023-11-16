@@ -1,4 +1,4 @@
-name: Update all Subscribers
+name: Update all packages
 on:
   schedule:
     # Run daily
@@ -17,7 +17,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Use JQ to reformat sourceMaintainers as a comma delimited list
-          MATRIX="$(jq -n 'reduce inputs as $in ([]; . + [$in | .sourceMaintainers = (.sourceMaintainers | join(","))])'  subscribers/*.json -c)"
+          MATRIX="$(jq -n 'reduce inputs as $in ([]; . + [$in | .sourceMaintainers = (.sourceMaintainers | join(","))])'  packages/*.json -c)"
           echo "include=$MATRIX" >> "$GITHUB_OUTPUT"
   integrate-package:
     name: Integrate "${{ matrix.recipeName }}"
