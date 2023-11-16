@@ -8,18 +8,20 @@ jobs:
   build-matrix:
     name: "Build update matrix"
     runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.generate-matrix.outputs.include }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: |
-          echo "matrix=$(jq 'reduce inputs as $in ([.]; . + [$in]) | {include: .}' subscribers/*.json -c)" >> "$GITHUB_OUTPUT"
+      - id: generate-matrix
+        run: |
+          MATRIX="$(jq 'reduce inputs as $in ([.]; . + [$in])' subscribers/*.json -c)"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
   integrate-package:
     name: Integrate "${{ matrix.recipeName }}"
     runs-on: ubuntu-latest
     needs: build-matrix
-    strategy:
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
     steps:
       - run: |
           echo "Integrating ${{ matrix.recipeName }} for ${{ matrix.sourceRepo }}"
