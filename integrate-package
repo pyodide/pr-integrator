@@ -97,7 +97,7 @@ if __name__ == "__main__":
             meta = yaml.safe_load(f.read())
 
         # Does pyodide already know about the latest version? Exit if so!
-        if str(meta['package']['version']) == pypi_package_version:
+        if False and str(meta['package']['version']) == pypi_package_version:
             raise SystemExit(0)
 
         # Update meta.yaml
@@ -145,6 +145,7 @@ if __name__ == "__main__":
             headers=headers,
             data=json.dumps(payload).encode("utf-8"),
         )
-        # with urllib.request.urlopen(request) as f:
-        #     assert f.status == 200
-        #     print(json.load(f))
+        if False:
+            with urllib.request.urlopen(request) as f:
+                assert f.status == 200
+                print(json.load(f))
