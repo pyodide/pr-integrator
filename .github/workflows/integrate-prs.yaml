@@ -27,11 +27,11 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.include) }}
     steps:
-#      - uses: actions/setup-python@v4
-#        with:
-#          python-version: '3.11'
-#          cache: 'pip'
-#      - run: python3 -m pip install pyyaml
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'y
+      - run: python3 -m pip install pyyaml
       - run: >-
           python3 -m python integrate-pr
           --repo "${{ matrix.sourceRepo }}"
