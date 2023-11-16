@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import copy
+import json
+import pathlib
+import subprocess
+import tempfile
+import urllib.request
+import os
+
+import yaml
+
+THIS_ORG = "pyodide-pr-bot"
+BRANCH_NAME_PATTERN = "chore-update-{recipe}-{version}"
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo", required=True)
+    parser.add_argument("--package", required=True)
+    parser.add_argument("--recipe", required=True)
+    parser.add_argument("--commit", default="Update {recipe} to {version}")
+    parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--ready-for-review", action="store_true", default=False)
+    group.add_argument("--not-ready-for-review", action="store_true")
+
+    parser.add_argument("--title", default="Upgrade {recipe} to {version}")
+    parser.add_argument("--body", default="This PR was created by a bot. Pinging {maintainers} to check this")
+    parser.add_argument("--maintainers", type=lambda x: x.split("."), required=True)
+    args = parser.parse_args()
+
+    assert args.token is not None
+
+    maintainer_users = ", ".join(f"@{n}" for n in args.maintainers if n.strip())
+
+    # Query PyPI
+    with urllib.request.urlopen(f"https://pypi.org/pypi/{args.package}/json") as f:
+        metadata = json.load(f)
+        assert f.status == 200
+    pypi_package_version = metadata['info']['version']
+    pypi_package_sdist = next(p for p in metadata['urls'] if p['packagetype'] == 'sdist')
+
+    with tempfile.TemporaryDirectory() as _tmp_dir:
+        tmp_dir = pathlib.Path(_tmp_dir)
+
+        # Clone pyodide
+        subprocess.run(
+            ["git", "clone", "https://github.com/pyodide/pyodide.git", "--depth=1"],
+            cwd=tmp_dir,
+            check=True,
+        )
+
+        # Add Git remote
+        subprocess.run(
+            [
+                "git",
+                "remote",
+                "add",
+                "upstream",
+                f"https://{args.token}@github.com/{THIS_ORG}/pyodide.git",
+            ],
+            check=True,
+            cwd=tmp_dir / "pyodide",
+        )
+        subprocess.run(["git", "remote", "update"], cwd=tmp_dir / "pyodide")
+
+        # Check if we've already made this PR, exit if so!
+        fork_branch_name = BRANCH_NAME_PATTERN.format(
+            repo=args.repo,
+            maintainers=maintainer_users,  # FIXME
+            version=pypi_package_version,
+            recipe=args.recipe
+        )
+        ls_remote_result = subprocess.run(
+            [
+                "git",
+                "ls-remote",
+                "--exit-code",
+                "--heads",
+                "upstream",
+                fork_branch_name,
+            ], cwd=tmp_dir / "pyodide"
+        )
+        if ls_remote_result.returncode == 0:
+            raise SystemExit(0)
+
+        # Switch to fork branch
+        subprocess.run(["git", "switch", "-c", fork_branch_name, "origin/main"], check=True, cwd=tmp_dir / "pyodide")
+
+        # Read the Conda-Forge meta.yaml
+        meta_path = tmp_dir / "pyodide" / "packages" / args.recipe / "meta.yaml"
+        with open(meta_path) as f:
+            meta = yaml.safe_load(f.read())
+
+        # Does pyodide already know about the latest version? Exit if so!
+        if False and str(meta['package']['version']) == pypi_package_version:
+            raise SystemExit(0)
+
+        # Update meta.yaml
+        new_meta = copy.deepcopy(meta)
+        new_meta['package']['version'] = str(pypi_package_version)
+        new_meta['source']['url'] = pypi_package_sdist['url']
+        new_meta['source']['sha256'] = pypi_package_sdist['digests']['sha256']
+        with open(meta_path, "w") as f:
+            f.write(yaml.safe_dump(meta))
+
+        # Add and commit changes to meta
+        subprocess.run(["git", "add", meta_path], check=True, cwd=tmp_dir / "pyodide")
+        subprocess.run(["git", "commit", "-m", args.commit.format(
+            maintainers=maintainer_users,  # FIXME
+            version=pypi_package_version,
+            recipe=args.recipe
+        )], check=True, cwd=tmp_dir / "pyodide")
+
+        # Push to remote
+        subprocess.run(["git", "push", "--set-upstream", "upstream"], check=True, cwd=tmp_dir / "pyodide")
+
+        payload = {
+            "title": args.title.format(
+                repo=args.repo,
+                maintainers=maintainer_users,  # FIXME
+                version=pypi_package_version,
+                recipe=args.recipe),
+            "body": args.body.format(
+                repo=args.repo,
+                maintainers=maintainer_users,  # FIXME
+                version=pypi_package_version,
+                recipe=args.recipe),
+            "head": f"{THIS_ORG}:{fork_branch_name}",
+            "base": "main",
+            "draft": not args.ready_for_review,
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        request = urllib.request.Request(
+            "https://api.github.com/repos/pyodide/pyodide/pulls",
+            method="POST",
+            headers=headers,
+            data=json.dumps(payload).encode("utf-8"),
+        )
+        # with urllib.request.urlopen(request) as f:
+        #     assert f.status == 200
+        #     print(json.load(f))

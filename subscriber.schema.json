@@ -24,10 +24,10 @@
       "type": "string",
       "title": "Pyodide Recipe Name"
     },
-    "prAsDraft": {
+    "prAsReady": {
       "type": "boolean",
-      "title": "Open as Draft?",
-      "default": true
+      "title": "Open as non-draft?",
+      "default": false
     },
     "prTitlePattern": {
       "type": "string",

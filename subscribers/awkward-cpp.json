@@ -1,6 +1,6 @@
 {
   "sourceRepo": "scikit-hep/awkward",
-  "sourceMaintainers": ["agoose77"],
+  "sourceMaintainers": ["agoose77", "jpivarski"],
   "packageName": "awkward_cpp",
   "recipeName": "awkward-cpp"
 }

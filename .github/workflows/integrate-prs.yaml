@@ -16,7 +16,8 @@ jobs:
           fetch-depth: 0
       - id: generate-matrix
         run: |
-          MATRIX="$(jq 'reduce inputs as $in ([.]; . + [$in])' subscribers/*.json -c)"
+          # Use JQ to reformat sourceMaintainers as a comma delimited list
+          MATRIX="$(jq -n 'reduce inputs as $in ([]; . + [$in | .sourceMaintainers = (.sourceMaintainers | join(","))])'  subscribers/*.json -c)"
           echo "include=$MATRIX" >> "$GITHUB_OUTPUT"
   integrate-package:
     name: Integrate "${{ matrix.recipeName }}"
@@ -26,5 +27,19 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.include) }}
     steps:
-      - run: |
-          echo "Integrating ${{ matrix.recipeName }} for ${{ matrix.sourceRepo }}"
+#      - uses: actions/setup-python@v4
+#        with:
+#          python-version: '3.11'
+#          cache: 'pip'
+#      - run: python3 -m pip install pyyaml
+      - run: >-
+          echo python3 -m python integrate-pr
+          --repo "${{ matrix.sourceRepo }}"
+          --package "${{ matrix.packageName }}"
+          --recipe "${{ matrix.recipeName }}"
+          ${{ matrix.prAsReady && '--ready-for-review' || '--not-ready-for-review' }}
+          --maintainers "${{ matrix.sourceMaintainers }}"
+          --commit 'Update {recipe} to {version}'
+          --title "${{ matrix.prTitlePattern || 'Upgrade {recipe} to {version}' }}"
+          --body "${{ matrix.prBodyPattern || 'This PR was created by a bot. Pinging {maintainers} to check this' }}"
+            
