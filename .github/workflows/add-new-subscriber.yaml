@@ -14,6 +14,8 @@ jobs:
         uses: tj-actions/changed-files@v40
         with:
           files: subscribers/*.{yml,yaml}
+      - name: Checkout Pyodide Main
+        run: git clone https://github.com/pyodide/pyodide.git
       - name: Validate new subscriber files
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
@@ -21,5 +23,8 @@ jobs:
             cat "$file" | pipx run jsonschema subscriber.schema.json
             # Ensure PyPI exists
             pypi_name=$(yq ".packageName" subscribers/awkward-cpp.json --raw-output) 
-            curl "https://pypi.org/pypi/${pypi_name}/json"
+            curl -s -o /dev/null -f "https://pypi.org/pypi/${pypi_name}/json"
+            # Ensure pyodide knows about this package
+            recipe_name=$(yq ".recipeName" subscribers/awkward-cpp.json --raw-output) 
+            test -d "pyodide/packages/${recipe_name}"
           done
