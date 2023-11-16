@@ -27,6 +27,9 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.include) }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Determine latest SHA256
         id: marker
         run: |
@@ -44,8 +47,8 @@ jobs:
         run: python3 -m pip install -r requirements.txt
       - name: Create marker
         if: ${{ !steps.marker.outputs.marker-exists }}
-        run: >-
-          marker=".hashes/${{ matrix.recipeName }}-${latest_sha}"
+        run: |
+          marker=".hashes/${{ matrix.recipeName }}-${{ steps.marker.outputs.sha256 }}"
           touch "${marker}"
           git add "${marker}"
           git commit -m "Add marker for ${{ matrix.recipeName }} (SHA256 ${{ steps.marker.outputs.sha256 }})"
