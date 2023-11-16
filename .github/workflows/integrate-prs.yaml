@@ -26,10 +26,16 @@ jobs:
     strategy:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.include) }}
+    env:
+      CI_COMMIT_AUTHOR: "pyodide-pr-bot (workflow)"
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Setup Git
+        run: |
+          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+          git config --global user.email "username@users.noreply.github.com"
       - name: Determine latest SHA256
         id: marker
         run: |
