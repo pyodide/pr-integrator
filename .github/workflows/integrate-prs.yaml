@@ -27,12 +27,32 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.include) }}
     steps:
-      - uses: actions/setup-python@v4
+      - name: Determine latest SHA256
+        id: marker
+        run: |
+          latest_sha=$(curl "https://pypi.org/pypi/${{ matrix.recipeName }}/json" -s | jq '.urls[] | select (.packagetype == "sdist").digests.sha256' --raw-output)
+          echo "sha256=${latest_sha}" >> "$GITHUB_OUTPUT"
+          test -f ".hashes/${{ matrix.recipeName }}-${latest_sha}" && echo "marker-exists=1" >> "$GITHUB_OUTPUT" || true
+      - name: Setup Python
+        if: ${{ !steps.marker.outputs.marker-exists }}
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip'y
-      - run: python3 -m pip install pyyaml
-      - run: >-
+          cache: 'pip'
+      - name: Install dependencies
+        if: ${{ !steps.marker.outputs.marker-exists }}
+        run: python3 -m pip install -r requirements.txt
+      - name: Create marker
+        if: ${{ !steps.marker.outputs.marker-exists }}
+        run: >-
+          marker=".hashes/${{ matrix.recipeName }}-${latest_sha}"
+          touch "${marker}"
+          git add "${marker}"
+          git commit -m "Add marker for ${{ matrix.recipeName }} (SHA256 ${{ steps.marker.outputs.sha256 }})"
+          git push
+      - name: Create PR
+        if: ${{ !steps.marker.outputs.marker-exists }}
+        run: >-
           python3 -m python integrate-pr
           --repo "${{ matrix.sourceRepo }}"
           --package "${{ matrix.packageName }}"
@@ -42,4 +62,3 @@ jobs:
           --commit 'Update {recipe} to {version}'
           --title "${{ matrix.prTitlePattern || 'Upgrade {recipe} to {version}' }}"
           --body "${{ matrix.prBodyPattern || 'This PR was created by a bot. Pinging {maintainers} to check this' }}"
-            
