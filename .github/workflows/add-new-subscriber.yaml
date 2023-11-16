@@ -11,9 +11,7 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v40
         with:
-          files: |
-             subscribers/*.yaml
-             subscribers/*.yml
+          files: subscribers/*.{yml,yaml}
       - name: Validate new subscriber files
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
