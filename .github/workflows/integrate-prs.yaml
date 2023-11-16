@@ -64,7 +64,7 @@ jobs:
       - name: Create PR
         if: ${{ !steps.marker.outputs.marker-exists }}
         run: >-
-          python3 -m python integrate-pr
+          python3 integrate-pr
           --repo "${{ matrix.sourceRepo }}"
           --package "${{ matrix.packageName }}"
           --recipe "${{ matrix.recipeName }}"
