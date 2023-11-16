@@ -2,11 +2,13 @@ name: Validate New Subscriber
 on: [pull_request]
 jobs:
   validate-subscriber:
+    name: "Validate new subscriber"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: chrisdickinson/setup-yq@latest
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v40
@@ -15,5 +17,9 @@ jobs:
       - name: Validate new subscriber files
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            # Validate schema
             cat "$file" | pipx run jsonschema subscriber.schema.json
+            # Ensure PyPI exists
+            pypi_name=$(yq ".packageName" subscribers/awkward-cpp.json --raw-output) 
+            curl "https://pypi.org/pypi/${pypi_name}/json"
           done
