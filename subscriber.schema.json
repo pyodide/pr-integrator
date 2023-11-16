@@ -1,0 +1,47 @@
+{
+  "title": "Subscriber schema",
+  "type": "object",
+  "properties": {
+    "sourceRepo": {
+      "type": "string",
+      "title": "Source Repo (org/repo)",
+      "pattern": "^[\\w\\d](-?([\\w\\d]-?)*[\\w\\d])?\\/[ -~]+$"
+    },
+    "sourceMaintainers": {
+      "type": "array",
+      "title": "Source Maintainer",
+      "items": {
+        "type": "string",
+        "pattern": "^[\\w\\d](-?([\\w\\d]-?)*[\\w\\d])?$"
+      },
+      "minItems": 1
+    },
+    "packageName": {
+      "type": "string",
+      "title": "PyPI Package Name"
+    },
+    "recipeName": {
+      "type": "string",
+      "title": "Pyodide Recipe Name"
+    },
+    "prAsDraft": {
+      "type": "boolean",
+      "title": "Open as Draft?",
+      "default": true
+    },
+    "prTitlePattern": {
+      "type": "string",
+      "default": "Upgrade {recipeName} to {version}"
+    },
+    "prBodyPattern": {
+      "type": "string",
+      "default": "This PR was created by a bot. Pinging @{sourceMaintainer} to check this."
+    }
+  },
+  "required": [
+    "sourceRepo",
+    "sourceMaintainers",
+    "packageName",
+    "recipeName"
+  ]
+}

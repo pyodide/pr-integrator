@@ -1,0 +1,21 @@
+name: Validate New Subscriber
+on: [pull_request]
+jobs:
+  validate-subscriber:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files: |
+             subscribers/*.yaml
+             subscribers/*.yml
+      - name: Validate new subscriber files
+        run: |
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            cat "$file" | pipx run jsonschema subscriber.schema.json
+          done
