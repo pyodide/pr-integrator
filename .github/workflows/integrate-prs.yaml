@@ -1,0 +1,26 @@
+name: Update all Subscribers
+on:
+  schedule:
+    # Run daily
+    - cron:  '0 12 * * *'
+  workflow_dispatch:
+jobs:
+  build-matrix:
+    name: "Build update matrix"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          matrix="$(jq 'reduce inputs as $in ([.]; . + [$in]) | {include: .}' subscribers/awkward-cpp.json subscribers/awkward-cpp.json -c | jq -R)"
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+  luanch-pr:
+    name: Integrate "${{ matrix.recipeName }}"
+    runs-on: ubuntu-latest
+    needs: generate-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
+    steps:
+      - run: |
+          echo "Integrating ${{ matrix.recipeName }} for ${{ matrix.sourceRepo }}"
