@@ -33,7 +33,7 @@ jobs:
 #          cache: 'pip'
 #      - run: python3 -m pip install pyyaml
       - run: >-
-          echo python3 -m python integrate-pr
+          python3 -m python integrate-pr
           --repo "${{ matrix.sourceRepo }}"
           --package "${{ matrix.packageName }}"
           --recipe "${{ matrix.recipeName }}"
