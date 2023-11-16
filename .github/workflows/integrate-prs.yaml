@@ -13,8 +13,7 @@ jobs:
         with:
           fetch-depth: 0
       - run: |
-          matrix="$(jq 'reduce inputs as $in ([.]; . + [$in]) | {include: .}' subscribers/awkward-cpp.json subscribers/awkward-cpp.json -c | jq -R)"
-          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(jq 'reduce inputs as $in ([.]; . + [$in]) | {include: .}' subscribers/*.json -c)" >> "$GITHUB_OUTPUT"
   integrate-package:
     name: Integrate "${{ matrix.recipeName }}"
     runs-on: ubuntu-latest
