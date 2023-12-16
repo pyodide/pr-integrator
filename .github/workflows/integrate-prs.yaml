@@ -73,4 +73,4 @@ jobs:
           --commit 'Update {recipe} to {version}'
           --title "${{ matrix.prTitlePattern || 'Upgrade {recipe} to {version}' }}"
           --body "${{ matrix.prBodyPattern || 'This PR was created by a bot. Pinging {maintainers} to check this' }}"
-          --token "${{ secrets.GITHUB_TOKEN_PYODIDE }}"
+          --token "${{ secrets.GH_TOKEN_PYODIDE }}"
