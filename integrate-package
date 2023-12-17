@@ -138,6 +138,7 @@ if __name__ == "__main__":
             "Content-Type": "application/json",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
+            "Authorization": f"Bearer {args.token}"
         }
         request = urllib.request.Request(
             "https://api.github.com/repos/pyodide/pyodide/pulls",
