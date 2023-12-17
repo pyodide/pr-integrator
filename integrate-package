@@ -97,7 +97,7 @@ if __name__ == "__main__":
             meta = yaml.safe_load(f.read())
 
         # Does pyodide already know about the latest version? Exit if so!
-        if False and str(meta['package']['version']) == pypi_package_version:
+        if str(meta['package']['version']) == pypi_package_version:
             raise SystemExit(0)
 
         # Update meta.yaml
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         new_meta['source']['url'] = pypi_package_sdist['url']
         new_meta['source']['sha256'] = pypi_package_sdist['digests']['sha256']
         with open(meta_path, "w") as f:
-            f.write(yaml.safe_dump(meta))
+            f.write(yaml.safe_dump(new_meta))
 
         # Add and commit changes to meta
         subprocess.run(["git", "add", meta_path], check=True, cwd=tmp_dir / "pyodide")
