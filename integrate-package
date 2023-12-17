@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--title", default="Upgrade {recipe} to {version}")
     parser.add_argument("--body", default="This PR was created by a bot. Pinging {maintainers} to check this")
-    parser.add_argument("--maintainers", type=lambda x: x.split("."), required=True)
+    parser.add_argument("--maintainers", type=lambda x: x.split(","), required=True)
     args = parser.parse_args()
 
     assert args.token is not None
