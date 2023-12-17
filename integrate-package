@@ -145,7 +145,7 @@ if __name__ == "__main__":
             headers=headers,
             data=json.dumps(payload).encode("utf-8"),
         )
-        if False:
-            with urllib.request.urlopen(request) as f:
-                assert f.status == 200
-                print(json.load(f))
+
+        with urllib.request.urlopen(request) as f:
+            assert f.status == 200
+            print(json.load(f))
