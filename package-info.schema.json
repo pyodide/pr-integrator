@@ -24,7 +24,7 @@
       "type": "string",
       "title": "Pyodide Recipe Name"
     },
-    "2": {
+    "prAsReady": {
       "type": "boolean",
       "title": "Open as non-draft?",
       "default": false
