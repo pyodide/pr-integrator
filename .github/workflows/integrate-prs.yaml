@@ -65,6 +65,9 @@ jobs:
           marker=".hashes/${{ matrix.recipeName }}-${{ steps.marker.outputs.sha256 }}"
           touch "${marker}"
           git add "${marker}"
+      - name: Push marker
+        if: ${{ !steps.marker.outputs.marker-exists && !inputs.dry-run}}
+        run: |
           git commit -m "Add marker for ${{ matrix.recipeName }} (SHA256 ${{ steps.marker.outputs.sha256 }})"
           git push
       - name: Create PR
