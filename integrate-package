@@ -11,7 +11,7 @@ import tempfile
 import urllib.request
 import os
 
-import yaml
+import raumel.yaml
 
 THIS_ORG = "pyodide-pr-bot"
 BRANCH_NAME_PATTERN = "chore-update-{recipe}-{version}"
@@ -93,20 +93,20 @@ if __name__ == "__main__":
 
         # Read the Conda-Forge meta.yaml
         meta_path = tmp_dir / "pyodide" / "packages" / args.recipe / "meta.yaml"
-        with open(meta_path) as f:
-            meta = yaml.safe_load(f.read())
+
+        yaml = ruamel.yaml.YAML(type="rt")
+        new_meta = yaml.load(meta_path)
+        meta = copy.deepcopy(new_meta)
 
         # Does pyodide already know about the latest version? Exit if so!
         if str(meta['package']['version']) == pypi_package_version:
             raise SystemExit(0)
 
         # Update meta.yaml
-        new_meta = copy.deepcopy(meta)
         new_meta['package']['version'] = str(pypi_package_version)
         new_meta['source']['url'] = pypi_package_sdist['url']
         new_meta['source']['sha256'] = pypi_package_sdist['digests']['sha256']
-        with open(meta_path, "w") as f:
-            f.write(yaml.safe_dump(new_meta))
+        yaml.dump(new_meta, meta_path)
 
         # Add and commit changes to meta
         subprocess.run(["git", "add", meta_path], check=True, cwd=tmp_dir / "pyodide")
