@@ -11,7 +11,7 @@ import tempfile
 import urllib.request
 import os
 
-import raumel.yaml
+import ruamel.yaml
 
 THIS_ORG = "pyodide-pr-bot"
 BRANCH_NAME_PATTERN = "chore-update-{recipe}-{version}"
