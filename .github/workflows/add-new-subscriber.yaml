@@ -1,4 +1,4 @@
-name: Validate New Subscriber
+name: Validate new subscriber
 on: [pull_request]
 jobs:
   validate-subscriber:
