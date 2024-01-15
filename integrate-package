@@ -28,6 +28,10 @@ if __name__ == "__main__":
     group.add_argument("--ready-for-review", action="store_true", default=False)
     group.add_argument("--not-ready-for-review", action="store_true")
 
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--dry-run", action="store_true", default=False)
+    group.add_argument("--not-dry-run", action="store_true")
+
     parser.add_argument("--title", default="Upgrade {recipe} to {version}")
     parser.add_argument("--body", default="This PR was created by a bot. Pinging {maintainers} to check this")
     parser.add_argument("--maintainers", type=lambda x: x.split(","), required=True)
@@ -117,7 +121,8 @@ if __name__ == "__main__":
         )], check=True, cwd=tmp_dir / "pyodide")
 
         # Push to remote
-        subprocess.run(["git", "push", "--set-upstream", "upstream"], check=True, cwd=tmp_dir / "pyodide")
+        if not args.dry_run:
+            subprocess.run(["git", "push", "--set-upstream", "upstream"], check=True, cwd=tmp_dir / "pyodide")
 
         payload = {
             "title": args.title.format(
@@ -140,13 +145,18 @@ if __name__ == "__main__":
             "X-GitHub-Api-Version": "2022-11-28",
             "Authorization": f"Bearer {args.token}"
         }
-        request = urllib.request.Request(
-            "https://api.github.com/repos/pyodide/pyodide/pulls",
-            method="POST",
-            headers=headers,
-            data=json.dumps(payload).encode("utf-8"),
-        )
+        if args.dry_run:
+            print(
+                json.dumps(payload, indent=4, sort_keys=True)
+            )
+        else:
+            request = urllib.request.Request(
+                "https://api.github.com/repos/pyodide/pyodide/pulls",
+                method="POST",
+                headers=headers,
+                data=json.dumps(payload).encode("utf-8"),
+            )
 
-        with urllib.request.urlopen(request) as f:
-            assert f.status == 200
-            print(json.load(f))
+            with urllib.request.urlopen(request) as f:
+                assert f.status == 200
+                print(json.load(f))
