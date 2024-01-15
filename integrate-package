@@ -98,7 +98,7 @@ if __name__ == "__main__":
         # Read the Conda-Forge meta.yaml
         meta_path = tmp_dir / "pyodide" / "packages" / args.recipe / "meta.yaml"
 
-        yaml = ruamel.yaml.YAML(type="rt")
+        yaml = ruamel.yaml.YAML(typ="rt")
         new_meta = yaml.load(meta_path)
         meta = copy.deepcopy(new_meta)
 
