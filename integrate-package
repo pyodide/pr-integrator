@@ -13,7 +13,6 @@ import os
 
 import ruamel.yaml
 
-THIS_ORG = "pyodide-pr-bot"
 BRANCH_NAME_PATTERN = "chore-update-{recipe}-{version}"
 
 if __name__ == "__main__":
@@ -23,6 +22,8 @@ if __name__ == "__main__":
     parser.add_argument("--recipe", required=True)
     parser.add_argument("--commit", default="Update {recipe} to {version}")
     parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
+    parser.add_argument("--downstream", default="pyodide/pyodide")
+    parser.add_argument("--upstream", default="pyodide/pyodide")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--ready-for-review", action="store_true", default=False)
@@ -39,8 +40,6 @@ if __name__ == "__main__":
 
     assert args.token is not None
 
-    maintainer_users = ", ".join(f"@{n}" for n in args.maintainers if n.strip())
-
     # Query PyPI
     with urllib.request.urlopen(f"https://pypi.org/pypi/{args.package}/json") as f:
         metadata = json.load(f)
@@ -53,7 +52,7 @@ if __name__ == "__main__":
 
         # Clone pyodide
         subprocess.run(
-            ["git", "clone", "https://github.com/pyodide/pyodide.git", "--depth=1"],
+            ["git", "clone", f"https://github.com/{args.upstream}.git", "--depth=1", "upstream-repo"],
             cwd=tmp_dir,
             check=True,
         )
@@ -65,14 +64,15 @@ if __name__ == "__main__":
                 "remote",
                 "add",
                 "upstream",
-                f"https://{args.token}@github.com/{THIS_ORG}/pyodide.git",
+                f"https://{args.token}@github.com/{args.downstream}.git",
             ],
             check=True,
-            cwd=tmp_dir / "pyodide",
+            cwd=tmp_dir / "upstream-repo",
         )
-        subprocess.run(["git", "remote", "update"], cwd=tmp_dir / "pyodide")
+        subprocess.run(["git", "remote", "update"], cwd=tmp_dir / "upstream-repo")
 
         # Check if we've already made this PR, exit if so!
+        maintainer_users = ", ".join(f"@{n}" for n in args.maintainers if n.strip())
         fork_branch_name = BRANCH_NAME_PATTERN.format(
             repo=args.repo,
             maintainers=maintainer_users,  # FIXME
@@ -87,16 +87,16 @@ if __name__ == "__main__":
                 "--heads",
                 "upstream",
                 fork_branch_name,
-            ], cwd=tmp_dir / "pyodide"
+            ], cwd=tmp_dir / "upstream-repo"
         )
         if ls_remote_result.returncode == 0:
             raise SystemExit(0)
 
         # Switch to fork branch
-        subprocess.run(["git", "switch", "-c", fork_branch_name, "origin/main"], check=True, cwd=tmp_dir / "pyodide")
+        subprocess.run(["git", "switch", "-c", fork_branch_name, "origin/main"], check=True, cwd=tmp_dir / "upstream-repo")
 
         # Read the Conda-Forge meta.yaml
-        meta_path = tmp_dir / "pyodide" / "packages" / args.recipe / "meta.yaml"
+        meta_path = tmp_dir / "upstream-repo" / "packages" / args.recipe / "meta.yaml"
 
         yaml = ruamel.yaml.YAML(typ="rt")
         new_meta = yaml.load(meta_path)
@@ -113,16 +113,18 @@ if __name__ == "__main__":
         yaml.dump(new_meta, meta_path)
 
         # Add and commit changes to meta
-        subprocess.run(["git", "add", meta_path], check=True, cwd=tmp_dir / "pyodide")
+        subprocess.run(["git", "add", meta_path], check=True, cwd=tmp_dir / "upstream-repo")
         subprocess.run(["git", "commit", "-m", args.commit.format(
             maintainers=maintainer_users,  # FIXME
             version=pypi_package_version,
             recipe=args.recipe
-        )], check=True, cwd=tmp_dir / "pyodide")
+        )], check=True, cwd=tmp_dir / "upstream-repo")
 
         # Push to remote
         if not args.dry_run:
-            subprocess.run(["git", "push", "--set-upstream", "upstream"], check=True, cwd=tmp_dir / "pyodide")
+            subprocess.run(["git", "push", "--set-upstream", "upstream"], check=True, cwd=tmp_dir / "upstream-repo")
+
+        downstream_org, downstream_repo = args.downstream.split("/", 1)
 
         payload = {
             "title": args.title.format(
@@ -135,7 +137,7 @@ if __name__ == "__main__":
                 maintainers=maintainer_users,  # FIXME
                 version=pypi_package_version,
                 recipe=args.recipe),
-            "head": f"{THIS_ORG}:{fork_branch_name}",
+            "head": f"{downstream_org}:{fork_branch_name}",
             "base": "main",
             "draft": not args.ready_for_review,
         }
@@ -151,7 +153,7 @@ if __name__ == "__main__":
             )
         else:
             request = urllib.request.Request(
-                "https://api.github.com/repos/pyodide/pyodide/pulls",
+                f"https://api.github.com/repos/{args.upstream}/pulls",
                 method="POST",
                 headers=headers,
                 data=json.dumps(payload).encode("utf-8"),

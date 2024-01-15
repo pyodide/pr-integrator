@@ -83,4 +83,5 @@ jobs:
           --title "${{ matrix.prTitlePattern || 'Upgrade {recipe} to {version}' }}"
           --body "${{ matrix.prBodyPattern || 'This PR was created by a bot. Pinging {maintainers} to check this' }}"
           --token "${{ secrets.GH_TOKEN_PYODIDE }}"
+          --downstream "pyodide-pr-bot/pyodide"
           ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run && '--dry-run' || '--not-dry-run' }} 
