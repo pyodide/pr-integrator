@@ -44,34 +44,35 @@ jobs:
         run: |
           git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
           git config --global user.email "username@users.noreply.github.com"
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements.txt
+        
+      # Check if we've already processed this package SHA!
       - name: Determine latest SHA256
         id: marker
         run: |
           latest_sha=$(curl "https://pypi.org/pypi/${{ matrix.recipeName }}/json" -s | jq '.urls[] | select (.packagetype == "sdist").digests.sha256' --raw-output)
           echo "sha256=${latest_sha}" >> "$GITHUB_OUTPUT"
           test -f ".hashes/${{ matrix.recipeName }}-${latest_sha}" && echo "marker-exists=1" >> "$GITHUB_OUTPUT" || true
-      - name: Setup Python
-        if: ${{ !steps.marker.outputs.marker-exists }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install dependencies
-        if: ${{ !steps.marker.outputs.marker-exists }}
-        run: python3 -m pip install -r requirements.txt
       - name: Create marker
         if: ${{ !steps.marker.outputs.marker-exists }}
         run: |
           marker=".hashes/${{ matrix.recipeName }}-${{ steps.marker.outputs.sha256 }}"
           touch "${marker}"
           git add "${marker}"
-      - name: Push marker
-        if: ${{ !steps.marker.outputs.marker-exists && !inputs.dry-run}}
-        run: |
           git commit -m "Add marker for ${{ matrix.recipeName }} (SHA256 ${{ steps.marker.outputs.sha256 }})"
-          git push
+      - name: Push marker
+        if: ${{ !steps.marker.outputs.marker-exists && !(github.event_name == 'workflow_dispatch' && inputs.dry-run)}}
+        run: git push
+
+      # Now issue PR
       - name: Create PR
-        if: ${{ !steps.marker.outputs.marker-exists }}
+        if: ${{ !steps.marker.outputs.marker-exists || (github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
         run: >-
           python3 integrate-package
           --repo "${{ matrix.sourceRepo }}"
