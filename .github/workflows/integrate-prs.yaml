@@ -4,6 +4,12 @@ on:
     # Run daily
     - cron:  '0 12 * * *'
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Dry run"
+        required: false
+        default: true
+        type: boolean
 jobs:
   build-matrix:
     name: "Build update matrix"
@@ -74,3 +80,4 @@ jobs:
           --title "${{ matrix.prTitlePattern || 'Upgrade {recipe} to {version}' }}"
           --body "${{ matrix.prBodyPattern || 'This PR was created by a bot. Pinging {maintainers} to check this' }}"
           --token "${{ secrets.GH_TOKEN_PYODIDE }}"
+          ${{ github.event_name == 'pull_request' && inputs.dry-run && '--dry-run' || 'not-dry-run' }} 
